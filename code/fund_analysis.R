@@ -10,7 +10,7 @@ suppressMessages(require(Cairo))
 suppressMessages(require(showtext))
 rm(list = ls())
 
-setwd("~/Documents/CPIC/fund_stimulation/code/")
+setwd("~/Documents/CPIC/fund_simulation/code/")
 
 # 模式1
 rolling1 <- read.csv("../result/rolling1yrs.csv")
