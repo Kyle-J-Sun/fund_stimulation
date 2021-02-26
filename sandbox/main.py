@@ -60,7 +60,7 @@ def main(argv):
     
     for i in range(1, 4):
         # print(rolling_start(df_all, fund_code=["340006.OF", "163402.OF", "519005.OF", "161005.OF"], period=i, E=1e9))
-        print(rolling_start(df_all, fund_code=["161005.OF"], period=3, E=1e9))
+        print(rolling_start(df_all, fund_code=["161005.OF"], period=2, E=1e9))
     return 0
 
 if __name__ == "__main__":
