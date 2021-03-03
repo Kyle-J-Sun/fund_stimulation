@@ -8,7 +8,7 @@ import warnings
 import sys
 from datetime import date, timedelta
 import time
-
+# from IPython.display import clear_output as clear
 
 def stamp_to_date(timestamp):
     """ function that converts timestamp into datetime type. """
@@ -136,9 +136,6 @@ def randCol_generator(df, seed=None):
     df["rand_num"] = df["rand_num"].apply(lambda x: 1 if x > 0.5 else -1)
     return df
 
-
-
-
 def timeFreq_adjust(df, sDate, freq="Q", reset_idx=True):
     """ To get subset of whole dataset of differnt time frequency.
 
@@ -175,8 +172,8 @@ def timeFreq_adjust(df, sDate, freq="Q", reset_idx=True):
 
     return df_changed
 
-def rolling_date(df_origin, df):
-    if df.index[0].month == 1:
+def find_year_end(df):
+    if df.index[0].month != 12:
         return df
     i = 0
     while True:
@@ -213,15 +210,15 @@ def timeFreq_expand(df_origin, df_adjusted=None, time_expand=1, toStart=True, to
     else:
         if time_expand == 1:
             sDate = stamp_to_date(df_origin.index[0])
-            print(sDate)
+#             print(sDate)
             eDate = stamp_to_date(df_adjusted.index[time_expand - 1])
-            print(eDate)
+#             print(eDate)
         else:
             sDate = stamp_to_date(
                 df_adjusted.index[time_expand - 2]) + timedelta(days=1)
-            print(sDate)
+#             print(sDate)
             eDate = stamp_to_date(df_adjusted.index[time_expand - 1])
-            print(eDate)
+#             print(eDate)
 
     return df_origin[sDate:eDate] if toEnd == False else df_origin[eDate + timedelta(days=1):]
 
@@ -289,8 +286,8 @@ def simulation_start(df_origin, df_changed, random=True, alpha_start=False, Eini
         """
 
         # 运作期间基准收益率(全阶段) == 业绩基准收益率
-        interval_return = np.prod(1 + df["hs300_return"]) - 1
-        # interval_return = (df.iat[-1, 3] / df.iat[0, 3] - 1)
+#         interval_return = np.prod(1 + df["hs300_return"]) - 1
+        interval_return = (df.iat[-1, 3] / df.iat[0, 3] - 1)
         benchmark_return = E * interval_return + np.sum(cf_occupied)  # 计算期间基准投资收益
         # 基金经理业绩收益
         excess_return = Eacc_return - benchmark_return
@@ -314,9 +311,9 @@ def simulation_start(df_origin, df_changed, random=True, alpha_start=False, Eini
         """
 
         # 期间连乘收益率
-        intv_prod_return = np.prod(1 + df["nv_return"]) - 1
-        margin = round(Emean_return * (intv_prod_return -
-                                       benchmk_return_3yr) * .1, 3)
+#         intv_prod_return = np.prod(1 + df["nv_return"]) - 1
+        intv_prod_return = (df.iat[-1, 2] / df.iat[0, 2] - 1)
+        margin = round(Emean_return * (intv_prod_return - benchmk_return_3yr) * .1, 3)
         # return margin
         return min(margin, Emean_return * .03) if margin > 0 else max(margin, 0)
 
@@ -335,8 +332,7 @@ def simulation_start(df_origin, df_changed, random=True, alpha_start=False, Eini
 
         """
 
-        margin = round(Emean_return * (Eacc_ratio -
-                                       benchmk_return_3yr) * .1, 3)
+        margin = round(Emean_return * (Eacc_ratio - benchmk_return_3yr) * .1, 3)
         return min(margin, Emean_return * .03) if margin > 0 else max(margin, 0)
 
     # Simulation Start
@@ -347,7 +343,6 @@ def simulation_start(df_origin, df_changed, random=True, alpha_start=False, Eini
         dfs = get_subset(df_changed, "%i-%i-%i" %(y, m, d), 1, dateCol, iter=True)
         end_date = stamp_to_date(dfs.iat[-1, 0])
         Nt = dfs.shape[0] - 1
-#         print(Nt)
 
         condition = range(0, dfs.shape[0]) if num == 0 else range(
             1, dfs.shape[0])
@@ -427,14 +422,12 @@ def simulation_start(df_origin, df_changed, random=True, alpha_start=False, Eini
 
                 if alpha_start == False and idx > 0 and monthTotal < (rollingWin * Nt):
                     E_end, net_cf, cf_sum = E_adjustment_random(amount=[E_end * changeAmt[0], -E_end * changeAmt[1]],
-                                                                Elimit=[
-                                                                    1e10, 2e8],
+                                                                Elimit=[1e10, 2e8],
                                                                 alpha_start=False)
 
                 if alpha_start == True and idx > 0 and monthTotal < (rollingWin * Nt):
                     E_end, net_cf, cf_sum = E_adjustment_random(amount=[E_end * changeAmt[0], -E_end * changeAmt[1]],
-                                                                Elimit=[
-                                                                    1e10, 2e8],
+                                                                Elimit=[1e10, 2e8],
                                                                 alpha_start=True)
 
             # 将现季度超额收益存入alpha变量
@@ -450,13 +443,21 @@ def simulation_start(df_origin, df_changed, random=True, alpha_start=False, Eini
             # print("cf_occFund%i:" % (monthSum), cf_occFund)
             cfDt_Nt.append(net_cf * Dt / Nt)
 
-        df_3yrs = rolling_date(df_origin[dt.datetime(y, m, d):end_date])
+        df_3yrs = find_year_end(df_origin[dt.datetime(y, m, d):end_date])
+#         display(df_3yrs)
         
-        fdOper_return = np.prod(1 + df_3yrs["nv_return"]) - 1
+        
+#         fdOper_return = np.prod(1 + df_3yrs["nv_return"]) - 1
+#         print("fdOper_return(Product)", fdOper_return)
+        fdOper_return = df_3yrs.iat[-1, 2]/df_3yrs.iat[0, 2] - 1
+#         print("fdOper_return(end_start)", fdOper_return)
         Eacc_return = E * fdOper_return + np.sum(cf_occFund)  # 计算期间委托资产累计投资收益
         Emean_return = E + np.sum(cfDt_Nt)  # 期间委托资产平均资金占用
         Eacc_ratio = Eacc_return / Emean_return  # 期间委托资产累计收益率
-        benchmk_return_3yr = np.prod(1 + df_3yrs["hs300_return"]) - 1
+#         benchmk_return_3yr = np.prod(1 + df_3yrs["hs300_return"]) - 1
+#         print("fdOper_return(Product)", fdOper_return)
+        benchmk_return_3yr = df_3yrs.iat[-1, 3]/df_3yrs.iat[0, 3] - 1
+#         print("fdOper_return(end_start)", fdOper_return)
         alpha_3yrs = fdOper_return - benchmk_return_3yr
 
         # 算法A
@@ -492,7 +493,7 @@ def simulation_start(df_origin, df_changed, random=True, alpha_start=False, Eini
     # print("return_margin2", return_margin2)
     return_margin3.append(margin3)
     # print("return_margin3", return_margin3)
-    yr_intv = str(sDate)[:4]
+    yr_intv = int(str(sDate)[:4]) + 1
 
     if alpha_start == True:
         mode = "Random_with_alpha"
@@ -530,8 +531,7 @@ def get_first_freq_summary(df, sDate, acc_code, rollingPeriods, freq, Einit, dat
         df_selected, sDate=sDate, freq=freq, reset_idx=True)
     # calculating alpha and alpha (from start) columns for adjusted dateset
     df_changed = get_alpha(df_changed, fromStart=True)
-    df_changed = get_subset(df_changed, str(df_changed.at[0, dateCol])[
-                            :10], rollingWin=rollingPeriods, dateCol=dateCol)
+    df_changed = get_subset(df_changed, str(df_changed.at[0, dateCol])[:10], rollingWin=rollingPeriods, dateCol=dateCol)
 
     # get original subset based on adjusted subset
     df_origin = timeFreq_expand(
@@ -544,7 +544,7 @@ def get_first_freq_summary(df, sDate, acc_code, rollingPeriods, freq, Einit, dat
     df_changed = idx_to_column(df_changed, "date2")
     # df_changed = df_changed.dropna()
     # df_changed.reset_index(drop=True, inplace=True)
-    df_origin = df_origin[1:]
+#     df_origin = df_origin[1:]
 
     return df_origin, df_changed
 
@@ -566,7 +566,6 @@ def simulation_output(df, changeAmt, year=(2007, 2010), acc_code="161005.OF", Ei
     """
 
     res = pd.DataFrame(data=None)
-#     print(type(year) == int)
     if type(year) == int:
         condition = range(year, year + 1)
     else:
@@ -588,28 +587,33 @@ def simulation_output(df, changeAmt, year=(2007, 2010), acc_code="161005.OF", Ei
     return res
 
 
-def multi_simu_output(df, yr, acc_code, rollingPeriods, freq, alpha_start, Einit, rep_times, changeAmt, verbose=False, dateCol="date2", seed=5):
+def multi_simu_output(df, yr, acc_code, rollingPeriods, freq, alpha_start, Einit, rep_times, changeAmt, verbose=False, dateCol="date2", seed=10):
     """ To output the simulation results of random mode """
 
     def process_bar(percent, start_str='', end_str='', total_length=0):
         """ Adding processing bar """
-        bar = ''.join(["\033[1;30m%s" % '=='] *
+        bar = ("").join(["\033[1;30m%s" % '=='] *
                       int(percent * total_length)) + ''
         bar = '\r' + start_str + \
             bar.ljust(total_length) + \
             ' {:0>4.1f}%|'.format(percent*100) + end_str
         print(bar, end='', flush=True)
-#         print("/n")
         return None
 
+    print("simulating year %i, fund_code %s,roolling period %i, initialised equity %.2f ,change amount %.2f/%.2f, and alpha_start = %s" % (yr, acc_code, rollingPeriods, Einit, changeAmt[0], changeAmt[1], alpha_start))
     randNum = 0
     rand_res = pd.DataFrame(data=None)
     while randNum < rep_times:
 
         df_origin, df_changed = get_first_freq_summary(
             df, "%i-%i-%i" % (yr-1, 12, 23), acc_code, rollingPeriods, freq, Einit, dateCol)
-        df_changed = randCol_generator(df_changed, seed)
-#         display(df_changed)
+        
+#         randCol_generator(df_changed, seed = seed)
+        
+        if seed == None:
+            df_changed = randCol_generator(df_changed)
+        else:
+            df_changed = randCol_generator(df_changed, seed = seed)
 
         if verbose == True:
             display(df_changed)
@@ -619,7 +623,7 @@ def multi_simu_output(df, yr, acc_code, rollingPeriods, freq, alpha_start, Einit
 
         rand_res = rand_res.append(row)
         randNum += 1
-
+        
         time.sleep(0.1)
         end_str = '100%'
         process_bar(randNum/rep_times, start_str='',
@@ -630,7 +634,8 @@ def multi_simu_output(df, yr, acc_code, rollingPeriods, freq, alpha_start, Einit
     return rand_res
 
 
-def simulation_repeat(df, year, acc_code, changeAmt, rollingPeriods, freq, alpha_start, Einit, rep_times, verbose=False, seed=5):
+def simulation_repeat(df, year, acc_code, changeAmt, rollingPeriods = 1, freq = "M", alpha_start = False, Einit = 1e9, rep_times = 1, verbose=False, seed=5, 
+                      outputPath = "../result/Random_without_alpha.csv"):
     """ Repeating the simulation results of random mode """
 
     if type(year) == int:
@@ -639,28 +644,19 @@ def simulation_repeat(df, year, acc_code, changeAmt, rollingPeriods, freq, alpha
         condition = range(year[0], year[1])
 
     res = pd.DataFrame(data=None)
-    for yr in condition:
-        row = multi_simu_output(df=df, yr=yr, acc_code=acc_code, changeAmt=changeAmt,
-                                rollingPeriods=rollingPeriods, freq=freq, alpha_start=alpha_start, Einit=Einit,
-                                rep_times=rep_times, verbose=verbose, seed=seed)
-        row = get_mean(row)
-        res = res.append(row)
+    for code in acc_code:
+        for yr in condition:
+            try:
+                row = multi_simu_output(df=df, yr=yr, acc_code=code, changeAmt=changeAmt,
+                                        rollingPeriods=rollingPeriods, freq=freq, alpha_start=alpha_start, Einit=Einit,
+                                        rep_times=rep_times, verbose=verbose, seed=seed)           
+                row = get_mean(row)
+                res = res.append(row)
+            except IndexError:
+                break
+
     # clear()
     res.reset_index(drop=True, inplace=True)
+    res.to_csv(outputPath, index = False)
     return res
 
-df_all = pd.read_csv("data/fund_data_all.csv")  # 读取基金数据
-# 转换column types
-df_all["date"] = pd.to_datetime(df_all["date"])
-df_all["acc_code"] = df_all["acc_code"].astype("string")
-df_all["acc_chName"] = df_all["acc_chName"].astype("string")
-df_all["hs300_return"] = df_all["hs300_return"] / 100
-df_all["date2"] = df_all["date"].copy()
-df_all = df_all[["date", "acc_code", "acc_chName", "net_values", "hs300", "hs300_return", "nv_return"]];
-df_all = idxToDate(df_all, dateCol = "date", copyName = "date2")
-
-# print(get_first_freq_summary(df_all, "2017-12-25", "161005.OF", 1, "M", 1e9)[1])
-print(simulation_output(df = df_all, year = [2007, 2020], acc_code = "161005.OF", changeAmt = [0.1, 0.1],
-                        rollingPeriods = 1, freq = "Q", Einit = 1e9))
-
-# print(simulation_repeat(df_all, [2007, 2020], "161005.OF", [0.1, 0.1], 1, "M", True, 1e9, 1, verbose=False, seed=10))
