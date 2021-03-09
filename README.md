@@ -1,7 +1,10 @@
 # Fund Simulation Program (基金模拟程序)
 
-__Author__: Jingkai Sun (孙旌凯) \\
+__Author__: Jingkai Sun (孙旌凯)
+
 __Date__: 2021.03.21
+
+__Email:__ jingkai.sun20@imperial.ac.uk
 
 ## Description:
 
